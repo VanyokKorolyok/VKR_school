@@ -15,7 +15,7 @@ import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import os
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError, validator
 
 # Инициализация FastAPI
 app = FastAPI()
@@ -81,6 +81,17 @@ class Report(Base):
     summary = Column(String)
     recommendations = Column(String)
     generated_at = Column(DateTime, default=datetime.utcnow)
+
+class GradeCreate(BaseModel):
+    student_id: int
+    subject: str
+    score: int
+
+    @validator('score')
+    def check_score(cls, v):
+        if not 1 <= v <= 5:
+            raise ValueError('Оценка должна быть от 1 до 5')
+        return v
 
 # Создание таблиц
 Base.metadata.create_all(bind=engine)
@@ -308,10 +319,15 @@ async def generate_report(student_id: int, current_user: User = Depends(get_curr
 
 # Эндпоинт для получения списка учеников (только для учителей)
 @app.get("/students")
-async def get_students(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_students(class_name: Optional[str] = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="Only teachers can view all students")
-    students = db.query(Student).all()
+
+    query = db.query(Student).join(Class)
+    if class_name:
+        query = query.filter(Class.name == class_name)
+
+    students = query.all()
     return [{"id": s.id, "name": s.name, "class_name": db.query(Class).filter(Class.id == s.class_id).first().name} for s in students]
 
 # Эндпоинт для получения оценок ученика (только свои оценки для учеников)
@@ -319,18 +335,19 @@ async def get_students(current_user: User = Depends(get_current_user), db: Sessi
 async def get_grades(student_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Ученик не найден")
 
     if current_user.role == "student":
         # Проверяем, что student_id соответствует текущему пользователю
         user_student = db.query(Student).filter(Student.user_id == current_user.id).first()
         if user_student.id != student_id:
-            raise HTTPException(status_code=403, detail="Students can only view their own grades")
+            raise HTTPException(status_code=403, detail="Ученики не могут просматривать чужие оценки")
 
     grades = db.query(Grade).filter(Grade.student_id == student_id).all()
     if not grades:
-        raise HTTPException(status_code=404, detail="No grades found")
-    return [{"id": g.id, "subject": g.subject, "score": g.score, "date": g.date} for g in grades]
+        return {"message": "Нет обнаржуенных оценок для этого ученика", "grades": []} # Возвращаем пустой список вместо ошибки
+
+    return [{"id": g.id, "subject": g.subject, "score": g.score, "date": g.date.isoformat()} for g in grades]
 
 @app.get("/me")
 async def get_current_user_data(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -338,6 +355,16 @@ async def get_current_user_data(current_user: User = Depends(get_current_user), 
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
         return {"role": current_user.role, "student_id": student.id}
     return {"role": current_user.role}
+
+
+@app.get("/classes")
+async def get_classes(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="Только учителяя могут просматривать классы")
+
+    classes = db.query(Class).all()
+    return [{"id": c.id, "name": c.name} for c in classes]
+
 # Эндпоинт для получения отчетов ученика (только свои отчеты для учеников)
 @app.get("/reports/{student_id}")
 async def get_reports(student_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -358,20 +385,75 @@ class GradeCreate(BaseModel):
     score: int
 
 
-# Эндпоинт для добавления оценки (только для учителей)
+# Обновленный эндпоинт для добавления оценки с валидацией и возвратом более подробной информации
 @app.post("/grades")
 async def add_grade(grade: GradeCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="Only teachers can add grades")
+
+    # Проверяем, существует ли студент
     student = db.query(Student).filter(Student.id == grade.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-    new_grade = Grade(student_id=grade.student_id, subject=grade.subject, score=grade.score, teacher_id=current_user.id)
-    db.add(new_grade)
-    db.commit()
-    db.refresh(new_grade)
-    return {"id": new_grade.id, "student_id": new_grade.student_id, "subject": new_grade.subject, "score": new_grade.score}
 
+    try:
+        # Убедимся, что все поля корректны
+        new_grade = Grade(
+            student_id=grade.student_id,
+            subject=grade.subject,
+            score=grade.score,
+            teacher_id=current_user.id,
+            date=datetime.utcnow()
+        )
+        db.add(new_grade)
+        db.commit()
+        db.refresh(new_grade)
+        return {
+            "message": "Grade added successfully",
+            "grade": {
+                "id": new_grade.id,
+                "student_id": new_grade.student_id,
+                "subject": new_grade.subject,
+                "score": new_grade.score,
+                "date": new_grade.date.isoformat()
+            }
+        }
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e.errors()))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# Новый эндпоинт для редактирования оценки
+@app.put("/grades/{grade_id}")
+async def update_grade(grade_id: int, grade: GradeCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can update grades")
+
+    db_grade = db.query(Grade).filter(Grade.id == grade_id, Grade.teacher_id == current_user.id).first()
+    if not db_grade:
+        raise HTTPException(status_code=404, detail="Grade not found or you don't have permission")
+
+    db_grade.subject = grade.subject
+    db_grade.score = grade.score
+    db_grade.date = datetime.utcnow()
+    db.commit()
+    db.refresh(db_grade)
+    return {"message": "Grade updated successfully", "grade": db_grade}
+
+# Новый эндпоинт для удаления оценки
+@app.delete("/grades/{grade_id}")
+async def delete_grade(grade_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can delete grades")
+
+    db_grade = db.query(Grade).filter(Grade.id == grade_id, Grade.teacher_id == current_user.id).first()
+    if not db_grade:
+        raise HTTPException(status_code=404, detail="Grade not found or you don't have permission")
+
+    db.delete(db_grade)
+    db.commit()
+    return {"message": "Grade deleted successfully"}
 
 # Запуск сервера
 if __name__ == "__main__":
