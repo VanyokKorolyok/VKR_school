@@ -33,7 +33,17 @@ function Grades({ token, role }) {
         const response = await axios.get(`http://localhost:8000/grades/${finalStudentId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setGrades(response.data);
+        // Проверяем, что возвращает сервер
+        if (response.data.message === "No grades found for this student") {
+          setGrades([]); // Устанавливаем пустой массив, если оценок нет
+        } else if (Array.isArray(response.data)) {
+          setGrades(response.data); // Если это массив оценок
+        } else if (response.data.grades) { // Если сервер возвращает объект с полем grades
+          setGrades(response.data.grades);
+        } else {
+          setGrades([]); // По умолчанию пустой массив, если структура неизвестна
+        }
+        setError(""); // Сбрасываем ошибку
       } catch (err) {
         setError("Failed to fetch grades: " + (err.response?.data?.detail || err.message));
       }
@@ -51,7 +61,9 @@ function Grades({ token, role }) {
     <div>
       <h2>Grades for Student ID: {finalStudentId}</h2>
       {error && <p className="error">{error}</p>}
-      {grades.length > 0 ? (
+      {grades.length === 0 ? (
+        <p>Оценок не обнаружено.</p>
+      ) : (
         <table>
           <thead>
             <tr>
@@ -70,8 +82,6 @@ function Grades({ token, role }) {
             ))}
           </tbody>
         </table>
-      ) : (
-        <p>No grades found for this student.</p>
       )}
     </div>
   );
