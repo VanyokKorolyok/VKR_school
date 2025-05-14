@@ -1,0 +1,168 @@
+.grades-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 15px; /* Уменьшили отступы */
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e0f7fa, #ffffff);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow-y: auto;
+  }
+  
+  .grades-header {
+    padding: 8px 0; /* Уменьшили отступы */
+    background-color: #ffffff;
+    border-bottom: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .grades-title {
+    font-size: 20px; /* Уменьшили размер шрифта */
+    margin: 0 15px;
+    display: inline;
+    color: #2c3e50;
+  }
+  
+  .logout-btn {
+    margin-left: 15px;
+    padding: 5px 12px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .logout-btn:hover {
+    background-color: #c0392b;
+  }
+  
+  .grades-main {
+    padding: 15px 0; /* Уменьшили отступы */
+  }
+  
+  .error-message {
+    color: #e74c3c;
+    margin-bottom: 8px;
+    padding: 8px;
+    background-color: #f9e4e4;
+    border-radius: 5px;
+  }
+  
+  .student-title {
+    font-size: 20px; /* Уменьшили размер шрифта */
+    color: #2c3e50;
+    margin-bottom: 15px;
+  }
+  
+  .no-grades {
+    color: #7f8c8d;
+    padding: 8px;
+  }
+  
+  .grade-card {
+    background-color: #ffffff;
+    padding: 12px; /* Уменьшили отступы */
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px; /* Уменьшили отступы */
+  }
+  
+  .card-title {
+    font-size: 16px; /* Уменьшили размер шрифта */
+    color: #2c3e50;
+    margin-bottom: 8px;
+  }
+  
+  .grades-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+  }
+  
+  .grades-table th,
+  .grades-table td {
+    padding: 8px; /* Уменьшили отступы */
+    text-align: left;
+    border: 1px solid #ddd;
+    font-size: 14px; /* Уменьшили размер шрифта */
+  }
+  
+  .grades-table th {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+  }
+  
+  .stats-btn {
+    padding: 8px 18px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    margin-top: 15px; /* Добавили отступ сверху */
+    margin-left: 10px;
+  }
+  
+  .stats-btn:hover {
+    background-color: #27ae60;
+    transform: scale(1.05);
+  }
+  
+  .stats-card {
+    margin-top: 15px;
+    background-color: #ffffff;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-height: 350px; /* Уменьшили максимальную высоту */
+    overflow-y: auto;
+  }
+  
+  .stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .close-btn {
+    padding: 4px 12px;
+    background-color: #bdc3c7;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .close-btn:hover {
+    background-color: #95a5a6;
+  }
+  
+  .stats-text {
+    color: #34495e;
+    margin: 8px 0;
+    font-size: 14px; /* Уменьшили размер шрифта */
+  }
+  
+  .chart-container {
+    height: 250px; /* Уменьшили высоту графика */
+    margin: 8px 0;
+  }
+
+  .report-message {
+    color: green;
+    font-size: 16px;
+    margin: 10px 0;
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
